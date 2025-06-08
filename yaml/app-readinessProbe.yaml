@@ -1,0 +1,64 @@
+                                                                            
+apiVersion: v1                                                            
+kind: Pod                                                                 
+metadata:                                                                 
+  name: app-bestpractice                                                  
+  labels:                                                                 
+    app.kubernetes.io/name: my-app                                        
+    app.kubernetes.io/instance: my-app-instance1                          
+    app.kubernetes.io/version: "v2.0.2"                                   
+    app.kubernetes.io/component: web                                      
+    app.kubernetes.io/part-of: my-application                             
+    environment: production                                               
+spec:                                                                     
+  # Pod-level security context: run as non-root user                      
+  securityContext:                                                        
+    runAsNonRoot: true                                                    
+    runAsUser: 1001                                                       
+    runAsGroup: 1001                                                      
+    fsGroup: 1001                                                         
+    # Optional: if using seccomp                                          
+    # seccompProfile:                                                     
+    #   type: RuntimeDefault                                              
+  containers:                                                             
+  - image: gcr.io/smartcity-gl/harmonic:v2.0.2                            
+    name: app                                                             
+    # Container-level security context: further restrict privileges       
+    securityContext:                                                      
+      allowPrivilegeEscalation: false                                     
+      capabilities:                                                       
+        drop:                                                             
+        - ALL                                                             
+      # Consider if your application can run with a read-only root filesystem                                                                  
+      # readOnlyRootFilesystem: true                                      
+    ports:                                                                
+    - containerPort: 8000                                                 
+      name: http                                                          
+      protocol: TCP # Explicitly define protocol                          
+    # Define resource requests and limits                                 
+    resources:                                                            
+      requests:                                                           
+        cpu: "100m" # 0.1 CPU core                                        
+        memory: "128Mi" # 128 Mebibytes                                   
+      limits:                                                             
+        cpu: "500m" # 0.5 CPU core                                        
+        memory: "256Mi" # 256 Mebibytes                                   
+    livenessProbe:                                                        
+      httpGet:                                                            
+        path: / # Assuming this path indicates the app is alive (not stuck)                                                                      
+        port: http # Use the port name for better maintainability         
+      initialDelaySeconds: 15 # Give more time for the app to start before liveness checks                                                             
+      timeoutSeconds: 3     # Slightly longer timeout                     
+      periodSeconds: 10                                                   
+      failureThreshold: 3                                                 
+    readinessProbe:                                                       
+      httpGet:                                                            
+        path: /ready # Specific endpoint to check if app is ready to serve traffic                                                                     
+        port: http   # Use the port name                                  
+      initialDelaySeconds: 5  # Wait a bit before checking readiness      
+      timeoutSeconds: 2      # Explicitly set timeout                     
+      periodSeconds: 5       # Less frequent readiness checks             
+      failureThreshold: 3                                                 
+      successThreshold: 1                                                 
+  # Optional: Define a termination grace period if your app needs time to shut down gracefully                                                        
+  # terminationGracePeriodSeconds: 30 
